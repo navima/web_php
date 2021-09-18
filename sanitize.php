@@ -1,5 +1,5 @@
 <?php
-function sanitize($data)
+function sanitize($data):string
 {
     $data = trim($data);
     $data = stripslashes($data);

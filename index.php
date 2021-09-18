@@ -37,78 +37,85 @@
         $in_username = sanitize($_POST["username"]);
         $password = sanitize($_POST["password"]);
 
-        //do authentication
+        if (!filter_var($in_username, FILTER_VALIDATE_EMAIL)) {
+            echo "<script> alert('Hibás felhasználónév!') </script>";
+        } else {
+            //do authentication
 
-        $succ = false;
+            $succ = false;
 
-        $f = fopen("password.txt", "r");
-        $found = false;
-        while (!feof($f)) {
-            $line = trim(fgets($f), "\n");
+            $f = fopen("password.txt", "r");
+            $found = false;
+            while (!feof($f)) {
+                $line = trim(fgets($f), "\n");
 
-            $parts = explode("*", decrypt($line));
-            if ($parts[0] === $in_username) {
-                $found = true;
-                if ($parts[1] === $password) {
-                    $succ = true;
-                } else {
-                    echo
-                    "<script> 
+                $parts = explode("*", decrypt($line));
+                if ($parts[0] === $in_username) {
+                    $found = true;
+                    if ($parts[1] === $password) {
+                        $succ = true;
+                    } else {
+                        echo
+                        "<script> 
                         alert('Hibás jelszó!'); 
                         sleep(3000).then(()=>{window.location.href='http://www.police.hu'})
                     </script>";
+                    }
+                    break;
                 }
-                break;
             }
-        }
-        fclose($f);
+            fclose($f);
 
-        if (!$found) {
-            echo "<script> alert('Nincs ilyen felhasználó!') </script>";
-        }
-
-        if ($succ) {
-            //retrieve color
-            $servername = "localhost";
-            $username = "root";
-            $password = "";
-
-
-            $conn = new mysqli(
-                $servername,
-                $username,
-                $password,
-                "adatok",
-                3306
-            );
-
-            if ($conn->connect_error) {
-                die("Connection failure: "
-                    . $conn->connect_error);
+            if (!$found) {
+                echo "<script> alert('Nincs ilyen felhasználó!') </script>";
             }
 
-            $sql = "SELECT Titkos FROM tabla WHERE Username = '" . $in_username . "'";
-            //echo "sql: " . $sql . "\n";
-            if ($result = $conn->query($sql)) {
-                $res_raw = $result->fetch_row()[0];
-                $result->free_result();
-            } else {
-                echo "Error: " . $conn->error;
+            if ($succ) {
+                //retrieve color
+
+                mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+                $servername = "localhost";
+                $username = "root";
+                $password = "";
+
+
+                $conn = new mysqli(
+                    $servername,
+                    $username,
+                    $password,
+                    "adatok",
+                    3306
+                );
+
+                if ($conn->connect_error) {
+                    die("Connection failure: "
+                        . $conn->connect_error);
+                }
+
+                $result;
+                $prep = $conn->prepare("SELECT Titkos FROM tabla WHERE Username = ?");
+                $prep->bind_param("s", $in_username);
+                $prep->execute();
+                $prep->bind_result($result);
+                $prep->fetch();
+                $res_raw = $result;
+
+
+                // Closing connection
+                $conn->close();
+
+                $colors = array(
+                    'piros' => 'red',
+                    'zold'  => 'green',
+                    'sarga' => 'yellow',
+                    'kek'   => 'blue',
+                    'fekete' => 'black',
+                    'feher' => 'white'
+                );
+                $succ = true;
+                $res = $colors[$res_raw];
             }
-
-            // Closing connection
-            $conn->close();
-
-            $colors = array(
-                'piros' => 'red',
-                'zold'  => 'green',
-                'sarga' => 'yellow',
-                'kek'   => 'blue',
-                'fekete' => 'black',
-                'feher' => 'white'
-            );
-            $succ = true;
-            $res = $colors[$res_raw];
         }
     }
     ?>
